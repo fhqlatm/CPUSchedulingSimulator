@@ -128,6 +128,8 @@ LIST_HEAD(realtimeClassQueue);
 LIST_HEAD(normalClassQueue);
 LIST_HEAD(idleClassQueue);
 
+int jobCount = 0;
+
 typedef struct
 {
     int pid;
@@ -210,17 +212,17 @@ void addtoreadyQueue(int *cpuClock)
 	{
 		if(!list_empty(&realtimeClassQueue))
 		{
-			list_move(&realtimeClassQueue, &readyQueue);
+			list_move_tail(&realtimeClassQueue, &readyQueue);
 		}
 
 		else if (!list_empty(&normalClassQueue))
 		{
-			list_move(&normalClassQueue, &readyQueue);
+			list_move_tail(&normalClassQueue, &readyQueue);
 		}
 
 		else
 		{
-			list_move(&idleClassQueue, &readyQueue);
+			list_move_tail(&idleClassQueue, &readyQueue);
 		}
 	}
 }
@@ -271,6 +273,25 @@ void processSimulator()
 				continue;
 			}
 			
+			/* realtime Process */
+			if(cur->isRealtime)
+			{
+				while(cur->progress < cur->len)
+				{
+					cpuClock++;
+					cur->progress += 1;
+					checkProcessArrival(&cpuClock);
+					addtoreadyQueue(&cpuClock);
+				}
+
+				if(cur->progress == cur->len)
+				{
+					cur->programCounter += 1;
+					list_del(&cur->ready);
+					list_del(&cur->realtimeClass);
+				}
+			}
+
 			/* normal Process */
 			if(!cur->isRealtime)
 			{
@@ -279,64 +300,38 @@ void processSimulator()
 					cpuClock++;
 					cur->progress += 1;
 					checkProcessArrival(&cpuClock);
+					addtoreadyQueue(&cpuClock);
+
+					if(!list_empty(&realtimeClassQueue))
+					{
+						sw = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
+
+						list_move(&readyQueue, &normalClassQueue);
+						list_move(&realtimeClassQueue, &readyQueue);
+
+						break;
+					}
 				}
 
 				if(cur->progress == cur->len)
 				{
 					cur->programCounter += 1;
-					list_del(&cur->real);
+					list_del(&cur->ready);
+					list_del(&cur->normalClass);
 				}
-			}
-			
-			/* realtime Process */
-			list_for_each_entry_safe(cur, next, &realtimeClassQueue, realtimeClass)
-			{
-				while(cur->progress < cur->len)
-				{
-					cpuClock++;
-					cur->progress += 1;
-					checkProcessArrival(&cpuClock);
-				}
-
-				if(cur->progress == cur->len)
-				{
-					cur->programCounter += 1;
-					list_del(&cur->real);
-				}
-			}
-
-			
-
-			while(cur->progress < cur->len)
-			{
-				cpuClock++;
-				cur->progress += 1;
-				checkProcessArrival(&cpuClock);
-
-				if(!list_empty(&realtimeClassQueue) && !cur->isRealtime)
-					break;
-			}
-
-			if(cur->progress == cur->len)
-			{
-				cur->programCounter += 1;
-				list_del(&cur->normalClass);
 			}
 		}
 
 		/* context switching */
-		if(performedjobCount < jobCount && cur->programCounter == (cur->code_bytes)/2)
+		if(performedjobCount < jobCount)
 		{
-			cpuClock += 10;
-			idleClock += 10;
+			cpuClock += 5;
+			idleClock += 5;
 
-			list_del(&cur->ready);
 
 			/* list empty : 1, not empty : 0 */
-			if(performedjobCount < jobCount && list_empty(&ready_queue) == 1 && list_empty(&wait_queue) != 1)
+			if(performedjobCount < jobCount && )
 			{
-				addIdleReadyQueue();
-
 				printf("%04d CPU: Switched\tfrom: %03d\tto: 100\n", cpuClock, cur->pid);
 			}
 
