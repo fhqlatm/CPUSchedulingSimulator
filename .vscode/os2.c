@@ -287,6 +287,7 @@ void processSimulator()
 				if(cur->progress == cur->len)
 				{
 					cur->programCounter += 1;
+					performedjobCount++;
 					list_del(&cur->ready);
 					list_del(&cur->realtimeClass);
 				}
@@ -316,6 +317,7 @@ void processSimulator()
 				if(cur->progress == cur->len)
 				{
 					cur->programCounter += 1;
+					performedjobCount++;
 					list_del(&cur->ready);
 					list_del(&cur->normalClass);
 				}
@@ -327,30 +329,12 @@ void processSimulator()
 		{
 			cpuClock += 5;
 			idleClock += 5;
+			checkProcessArrival(&cpuClock);
+			addtoreadyQueue(&cpuClock);
 
+			sw = list_first_entry(&readyQueue, process_t, ready);
 
-			/* list empty : 1, not empty : 0 */
-			if(performedjobCount < jobCount && )
-			{
-				printf("%04d CPU: Switched\tfrom: %03d\tto: 100\n", cpuClock, cur->pid);
-			}
-
-			else
-			{
-				list_for_each_entry_safe(cur1, next1, &ready_queue, ready)
-				{	
-					printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, cur1->pid);
-					break;
-				}
-			}
-
-			/* list empty : 1 */
-			if(performedjobCount < jobCount && list_empty(&ready_queue) == 1 && list_empty(&wait_queue) != 1)
-			{
-				addIdleReadyQueue();
-
-				printf("%04d CPU: Switched\tfrom: %03d\tto: 100\n", cpuClock, cur->pid);
-			}
+			printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, sw->pid);
 		}
 
 		if(performedjobCount == jobCount)
