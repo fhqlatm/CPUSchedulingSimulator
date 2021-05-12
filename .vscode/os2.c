@@ -122,6 +122,7 @@ static inline int list_empty(const struct list_head *head) {
 #endif
 
 /* assignment */
+LIST_HEAD(readyQueue);
 LIST_HEAD(jobQueue);
 LIST_HEAD(realtimeClassQueue);
 LIST_HEAD(normalClassQueue);
@@ -153,6 +154,7 @@ typedef struct
 	int programCounter;
 	int progress;
 
+	struct list_head ready;
 	struct list_head job;
     struct list_head realtimeClass;
     struct list_head normalClass;
@@ -168,7 +170,7 @@ void addIdleProcess()
 	processPtr->arrival_time = 0;
 	processPtr->code_bytes = 2;
 	processPtr->op = 0;
-	processPtr->len = 0;
+	processPtr->len = 0xFF;
 	
 	processPtr->isProcessArrival = 1;
 	processPtr->isRealtime = 0;
@@ -202,6 +204,26 @@ void checkProcessArrival(int *cpuClock)
 	}
 }
 
+void addtoreadyQueue(int *cpuClock)
+{
+	if(list_empty(&readyQueue))
+	{
+		if(!list_empty(&realtimeClassQueue))
+		{
+			list_move(&realtimeClassQueue, &readyQueue);
+		}
+
+		else if (!list_empty(&normalClassQueue))
+		{
+			list_move(&normalClassQueue, &readyQueue);
+		}
+
+		else
+		{
+			list_move(&idleClassQueue, &readyQueue);
+		}
+	}
+}
 
 void processSimulator()
 {
@@ -214,6 +236,7 @@ void processSimulator()
 	while(1)
 	{
 		checkProcessArrival(&cpuClock);
+		addtoreadyQueue(&cpuClock);
 		
 		/* add idle Process to idleClassQueue */
 		if(cpuClock == 0)
@@ -222,96 +245,108 @@ void processSimulator()
 			printf("0000 CPU: Loaded PID: 100\tArrival: 000\tCodesize: 002\tPC: 000\n");
 		}
 
-		/* idle Process */
-		if(cur->pid == 100)
+		/* ready Queue */
+		list_for_each_entry_safe(cur, next, &readyQueue, ready)
 		{
-			checkReadyQueue(&cpuClock);
-			checkWaitQueue(&cpuClock, &performedjobCount);
+			/* idle Process */
+			if(cur->pid == 100)
+			{
+				while(list_empty(&readyQueue))
+				{
+					cpuClock++;
+					idleClock++;
+					checkProcessArrival(&cpuClock);
+					addtoreadyQueue(&cpuClock);
+				}
 
-			while(list_empty(&realtimeClassQueue) && list_empty(&normalClassQueue))
+				list_move(&readyQueue, &idleClassQueue);
+				
+				cpuClock += 5;
+				idleClock += 5;
+
+				sw = list_first_entry(&readyQueue, process_t, ready);
+
+				printf("%04d CPU: Switched\tfrom: 100\tto: %03d\n", cpuClock, sw->pid);
+
+				continue;
+			}
+			
+			/* normal Process */
+			if(!cur->isRealtime)
+			{
+				while(cur->progress < cur->len)
+				{
+					cpuClock++;
+					cur->progress += 1;
+					checkProcessArrival(&cpuClock);
+				}
+
+				if(cur->progress == cur->len)
+				{
+					cur->programCounter += 1;
+					list_del(&cur->real);
+				}
+			}
+			
+			/* realtime Process */
+			list_for_each_entry_safe(cur, next, &realtimeClassQueue, realtimeClass)
+			{
+				while(cur->progress < cur->len)
+				{
+					cpuClock++;
+					cur->progress += 1;
+					checkProcessArrival(&cpuClock);
+				}
+
+				if(cur->progress == cur->len)
+				{
+					cur->programCounter += 1;
+					list_del(&cur->real);
+				}
+			}
+
+			
+
+			while(cur->progress < cur->len)
 			{
 				cpuClock++;
-				idleClock++;
+				cur->progress += 1;
 				checkProcessArrival(&cpuClock);
+
+				if(!list_empty(&realtimeClassQueue) && !cur->isRealtime)
+					break;
 			}
-			
-			cpuClock += 5;
-			idleClock += 5;
 
-			if(list_empty(&realtimeClassQueue))
-				sw = list_first_entry(&normalClassQueue, process_t, normalClass);
-
-			else
-				sw = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
-
-
-			printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, sw->pid);
-
-			break;
+			if(cur->progress == cur->len)
+			{
+				cur->programCounter += 1;
+				list_del(&cur->normalClass);
+			}
 		}
 
-		list_for_each_entry_safe(cur, next, &realtimeClassQueue, realtimeClass)
+		/* context switching */
+		if(performedjobCount < jobCount && cur->programCounter == (cur->code_bytes)/2)
 		{
-			
+			cpuClock += 10;
+			idleClock += 10;
 
-			/* normal Process */
-			if(cur->isRealtime == 0)
+			list_del(&cur->ready);
+
+			/* list empty : 1, not empty : 0 */
+			if(performedjobCount < jobCount && list_empty(&ready_queue) == 1 && list_empty(&wait_queue) != 1)
 			{
-				while(cur->programCounter < cur->len)
-				{
-					cpuClock++;
-					cur->programCounter += 1;
-					checkProcessArrival(&cpuClock);
+				addIdleReadyQueue();
 
-					if(list_empty(&realtimeClassQueue) != 1)
-					{
-						list_move(&readyQueue, &normalClassQueue);
-						list_move(&realtimeClassQueue, &);
-					}
-				}
-			}				
-
-			/* realtime Process */
-			if(cur->isRealtime == 1)
-			{
-				while(cur->programCounter < cur->len)
-				{
-					cpuClock++;
-					cur->programCounter += 1;
-					checkProcessArrival(&cpuClock);
-
-					
-				}
+				printf("%04d CPU: Switched\tfrom: %03d\tto: 100\n", cpuClock, cur->pid);
 			}
-				
 
-			
-
-			/* context switching */
-			if(performedjobCount < jobCount && cur->programCounter == (cur->code_bytes)/2)
+			else
 			{
-				cpuClock += 10;
-				idleClock += 10;
-
-				list_del(&cur->ready);
-
-				/* list empty : 1, not empty : 0 */
-				if(performedjobCount < jobCount && list_empty(&ready_queue) == 1 && list_empty(&wait_queue) != 1)
-				{
-					addIdleReadyQueue();
-
-					printf("%04d CPU: Switched\tfrom: %03d\tto: 100\n", cpuClock, cur->pid);
+				list_for_each_entry_safe(cur1, next1, &ready_queue, ready)
+				{	
+					printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, cur1->pid);
+					break;
 				}
-
-				else
-				{
-					list_for_each_entry_safe(cur1, next1, &ready_queue, ready)
-					{	
-						printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, cur1->pid);
-						break;
-					}
-				}
-
 			}
 
 			/* list empty : 1 */
