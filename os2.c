@@ -155,6 +155,8 @@ typedef struct
 	int isRealtime;
 	int programCounter;
 	int progress;
+	int timeSlice;
+
 	int responseTime;
 	int isResponse;
 	int waitingTime;
@@ -181,6 +183,7 @@ void addIdleProcess()
 	processPtr->isRealtime = 0;
 	processPtr->programCounter = 0;
 	processPtr->progress = 0;
+	processPtr->timeSlice = 0;
 
 	list_add(&processPtr->idleClass, &idleClassQueue);
 }
@@ -212,44 +215,30 @@ void checkProcessArrival(int *cpuClock)
 
 void addtoreadyQueue(int *cpuClock)
 {
-	
-	if(list_empty(&readyQueue))
+	process_t *cur;
+
+	/* realtime -> ready Queue */
+	if(!list_empty(&realtimeClassQueue))
 	{
-		process_t *cur, *next, *shortest;
+		cur = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
+		list_add_tail(&cur->ready, &readyQueue);
+		list_del(&cur->realtimeClass);
+	}
 
-		/* realtime -> ready Queue */
-		if(!list_empty(&realtimeClassQueue))
-		{
-			cur = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
-			list_add_tail(&cur->ready, &readyQueue);
-			list_del(&cur->realtimeClass);
-		}
+	/* normal -> ready Queue */
+	else if (!list_empty(&normalClassQueue))
+	{
+		cur = list_first_entry(&normalClassQueue, process_t, normalClass);
+		list_add_tail(&cur->ready, &readyQueue);
+		list_del(&cur->normalClass);
+	}
 
-		/* normal -> ready Queue by SRJF */
-		else if (!list_empty(&normalClassQueue))
-		{
-			int shortestTime = 0xFF;
-
-			list_for_each_entry_safe(cur, next, &normalClassQueue, normalClass)
-			{
-				if((cur->len - cur->progress) <= shortestTime)
-				{
-					shortest = cur;	
-					shortestTime = shortest->len - shortest->progress;
-				}
-			}
-
-			list_add_tail(&shortest->ready, &readyQueue);
-			list_del(&shortest->normalClass);
-		}
-
-		/* idle -> ready Queue */
-		else
-		{
-			cur = list_first_entry(&idleClassQueue, process_t, idleClass);
-			list_add_tail(&cur->ready, &readyQueue);
-			list_del(&cur->idleClass);
-		}
+	/* idle -> ready Queue */
+	else
+	{
+		cur = list_first_entry(&idleClassQueue, process_t, idleClass);
+		list_add_tail(&cur->ready, &readyQueue);
+		list_del(&cur->idleClass);
 	}
 }
 
@@ -339,10 +328,11 @@ void processSimulator()
 		/* normal Process */
 		if(!cur->isRealtime)
 		{
-			while(cur->progress < cur->len)
+			list_for_each_entry_safe(cur, next, &readyQueue, ready)
 			{
 				cpuClock++;
 				cur->progress += 1;
+				cur->timeSlice += 1;
 
 				if(cur->progress == cur->len)
 				{
@@ -361,15 +351,53 @@ void processSimulator()
 				{
 					sw = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
 
-					list_add(&cur->normalClass, &normalClassQueue);
-					list_del(&cur->ready);
-
 					list_add(&sw->ready, &readyQueue);
 					list_del(&sw->realtimeClass);
 
 					break;
 				}
 
+				/* context switching (round) */
+				if(cur->timeSlice == 50)
+				{
+					/* next process in round */
+					if(next != NULL)
+					{
+						cpuClock += 5;
+						idleClock += 5;
+
+						printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, next->pid);
+						
+						/* first load of process */
+						if(!next->isResponse)
+						{
+							next->responseTime = cpuClock - next->arrival_time;
+							next->isResponse = 1;
+						}
+					}
+
+					/* round end */
+					if(next == NULL)
+					{
+						printf("%04d CPU: ROUND ENDS. Recharge the Timeslices\n", cpuClock);
+
+						sw = list_first_entry(&readyQueue, process_t, ready);
+
+						/* process not change */
+						if(cur == sw)
+						{
+							printf("%04d CPU: Not Switched\tPID: %03d\n", cpuClock, cur->pid);
+						}
+
+						else
+						{
+							cpuClock += 5;
+							idleClock += 5;
+
+							printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, sw->pid);
+						}
+					}
+				}
 			}
 		}
 
@@ -434,6 +462,7 @@ int main(int argc, char* argv[])
 		processPtr->isProcessArrival = 0;
 		processPtr->programCounter = 0;
 		processPtr->progress = 0;
+		processPtr->timeSlice = 0;
 		processPtr->responseTime = 0;
 		processPtr->isResponse = 0;
 		processPtr->waitingTime = 0;
