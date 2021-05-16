@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string.h>
 #include <limits.h>
+#include <unistd.h>
 
 /* linked list structure */
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
@@ -80,6 +81,12 @@ static inline int list_empty(const struct list_head *head) {
 
 #define list_first_entry(ptr, type, member) \
     list_entry((ptr)->next, type, member)
+
+#define list_last_entry(ptr, type, member) \
+	list_entry((ptr)->prev, type, member)
+
+#define list_next_entry(pos, member) \
+	list_entry((pos)->member.next, typeof(*(pos)), member)
 
 #define list_for_each(pos, head) \
   for (pos = (head)->next; pos != (head);	\
@@ -185,7 +192,7 @@ void addIdleProcess()
 	processPtr->progress = 0;
 	processPtr->timeSlice = 0;
 
-	list_add(&processPtr->idleClass, &idleClassQueue);
+	list_add_tail(&processPtr->idleClass, &idleClassQueue);
 }
 
 void checkProcessArrival(int *cpuClock)
@@ -213,16 +220,24 @@ void checkProcessArrival(int *cpuClock)
 }
 
 
-void addtoreadyQueue(int *cpuClock)
+int addtoreadyQueue(int *cpuClock)
 {
-	process_t *cur;
+	process_t *cur, *ready;
 
 	/* realtime -> ready Queue */
 	if(!list_empty(&realtimeClassQueue))
 	{
 		cur = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
-		list_add_tail(&cur->ready, &readyQueue);
+		ready = list_first_entry(&readyQueue, process_t, ready);
+
+		if (ready->pid == 100)
+			list_add_tail(&cur->ready, &readyQueue);
+
+		else
+			list_add(&cur->ready, &readyQueue);
+
 		list_del(&cur->realtimeClass);
+		return 0;
 	}
 
 	/* normal -> ready Queue */
@@ -231,14 +246,16 @@ void addtoreadyQueue(int *cpuClock)
 		cur = list_first_entry(&normalClassQueue, process_t, normalClass);
 		list_add_tail(&cur->ready, &readyQueue);
 		list_del(&cur->normalClass);
+		return 0;
 	}
 
 	/* idle -> ready Queue */
-	else
+	else if(list_empty(&readyQueue))
 	{
 		cur = list_first_entry(&idleClassQueue, process_t, idleClass);
 		list_add_tail(&cur->ready, &readyQueue);
 		list_del(&cur->idleClass);
+		return 1;
 	}
 }
 
@@ -249,8 +266,11 @@ void processSimulator()
 	int performedjobCount = 0;
 	int totalResposeTime = 0;
 	int totalWaitingTime = 0;
+	int isIdle = 0;
+	int isPreemtion = 0;
 
-	process_t *cur, *next, *sw;
+	process_t *cur, *next, *sw, *last;
+	process_t *cur1, *next1;
 
 	while(1)
 	{
@@ -271,26 +291,27 @@ void processSimulator()
 		/* idle Process */
 		if(cur->pid == 100)
 		{
-			list_add(&cur->idleClass, &idleClassQueue);
-			list_del(&cur->ready);
-
+			isIdle = 1;
 			checkProcessArrival(&cpuClock);
-			addtoreadyQueue(&cpuClock);
+			isIdle = addtoreadyQueue(&cpuClock);
 
-			while(list_empty(&readyQueue))
+			while(isIdle)
 			{
 				cpuClock++;
 				idleClock++;
 				checkProcessArrival(&cpuClock);
-				addtoreadyQueue(&cpuClock);
+				isIdle = addtoreadyQueue(&cpuClock);
 			}
-			
-			sw = list_first_entry(&readyQueue, process_t, ready);
 
 			cpuClock += 5;
 			idleClock += 5;
 
+			sw = list_next_entry(cur, ready);
+
 			printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, sw->pid);
+
+			list_add_tail(&cur->idleClass, &idleClassQueue);
+			list_del(&cur->ready);
 
 			/* first load of process */
 			if(!sw->isResponse)
@@ -326,76 +347,78 @@ void processSimulator()
 		}
 
 		/* normal Process */
-		if(!cur->isRealtime)
+		if(!cur->isRealtime && cur->pid != 100)
 		{
 			list_for_each_entry_safe(cur, next, &readyQueue, ready)
 			{
-				cpuClock++;
-				cur->progress += 1;
-				cur->timeSlice += 1;
-
-				if(cur->progress == cur->len)
-				{
-					cur->programCounter += 1;
-					performedjobCount++;
-					printf("%04d CPU: Process is terminated\tPID:%03d\tPC:%03d\n", cpuClock, cur->pid, cur->programCounter);
-					cur->waitingTime = cpuClock - cur->arrival_time - cur->len;
-					list_del(&cur->ready);
-				}
-
 				checkProcessArrival(&cpuClock);
 				addtoreadyQueue(&cpuClock);
 
-				/* realtime process loaded*/
-				if(!list_empty(&realtimeClassQueue))
+				while(cur->progress < cur->len)
 				{
-					sw = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
+					cpuClock++;
+					cur->progress += 1;
+					cur->timeSlice += 1;
 
-					list_add(&sw->ready, &readyQueue);
-					list_del(&sw->realtimeClass);
+					checkProcessArrival(&cpuClock);
+					last = list_last_entry(&readyQueue, process_t, ready);
+
+					if(cur->progress == cur->len)
+					{
+						cur->programCounter += 1;
+						performedjobCount++;
+						printf("%04d CPU: Process is terminated\tPID:%03d\tPC:%03d\n", cpuClock, cur->pid, cur->programCounter);
+						cur->waitingTime = cpuClock - cur->arrival_time - cur->len;
+						list_del(&cur->ready);
+
+						break;
+					}
+
+					/* realtime process loaded */
+					if(!list_empty(&realtimeClassQueue))
+					{
+						addtoreadyQueue(&cpuClock);
+
+						isPreemtion = 1;
+						break;
+					}
+
+					/* timeSlice 50 */
+					if(cur->timeSlice == 50)
+					{
+						break;
+					}
+				}
+
+				/* realtime process loaded */
+				if(isPreemtion)
+				{
+					isPreemtion = 0;
+					break;
+				}
+				/* round end */
+				if(cur == last && performedjobCount < jobCount)
+				{
+					printf("%04d CPU: ROUND ENDS. Recharge the Timeslices\n", cpuClock);
+					
+					list_for_each_entry_safe(cur1, next1, &readyQueue, ready)
+						cur1->timeSlice = 0;
 
 					break;
 				}
 
-				/* context switching (round) */
-				if(cur->timeSlice == 50)
+				else if (performedjobCount < jobCount && !list_empty(&readyQueue))
 				{
-					/* next process in round */
-					if(next != NULL)
+					cpuClock += 5;
+					idleClock += 5;
+
+					printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, next->pid);
+
+					/* first load of process */
+					if(!next->isResponse)
 					{
-						cpuClock += 5;
-						idleClock += 5;
-
-						printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, next->pid);
-						
-						/* first load of process */
-						if(!next->isResponse)
-						{
-							next->responseTime = cpuClock - next->arrival_time;
-							next->isResponse = 1;
-						}
-					}
-
-					/* round end */
-					if(next == NULL)
-					{
-						printf("%04d CPU: ROUND ENDS. Recharge the Timeslices\n", cpuClock);
-
-						sw = list_first_entry(&readyQueue, process_t, ready);
-
-						/* process not change */
-						if(cur == sw)
-						{
-							printf("%04d CPU: Not Switched\tPID: %03d\n", cpuClock, cur->pid);
-						}
-
-						else
-						{
-							cpuClock += 5;
-							idleClock += 5;
-
-							printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, sw->pid);
-						}
+						next->responseTime = cpuClock - next->arrival_time;
+						next->isResponse = 1;
 					}
 				}
 			}
@@ -409,11 +432,20 @@ void processSimulator()
 			
 			sw = list_first_entry(&readyQueue, process_t, ready);
 
-			cpuClock += 5;
-			idleClock += 5;
+			if(cur == sw)
+			{
+				printf("%04d CPU: Not Switched\tPID: %03d\n", cpuClock, sw->pid);
+				sw->timeSlice = 0;
+			}
 
-			printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, sw->pid);
-			
+			else
+			{
+				cpuClock += 5;
+				idleClock += 5;
+
+				printf("%04d CPU: Switched\tfrom: %03d\tto: %03d\n", cpuClock, cur->pid, sw->pid);
+			}
+
 			/* first load of process */
 			if(!sw->isResponse)
 			{
