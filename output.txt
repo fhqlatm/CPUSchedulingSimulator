@@ -1,0 +1,132 @@
+TEST SIMULATOR
+
+===== TEST-1 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0878 IDLE: 0020 UTIL: 97.72% WAIT: 391.40 RESPONSE: 391.40
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0878 IDLE: 0020 UTIL: 97.72% WAIT: 293.40 RESPONSE: 293.40
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0943 IDLE: 0085 UTIL: 90.99% WAIT: 520.80 RESPONSE: 138.60
+***
+===== TEST-2 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0822 IDLE: 0015 UTIL: 98.18% WAIT: 320.50 RESPONSE: 320.50
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0822 IDLE: 0015 UTIL: 98.18% WAIT: 315.00 RESPONSE: 315.00
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0887 IDLE: 0080 UTIL: 90.98% WAIT: 616.00 RESPONSE: 115.25
+***
+===== TEST-3 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0876 IDLE: 0020 UTIL: 97.72% WAIT: 322.40 RESPONSE: 322.40
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0876 IDLE: 0020 UTIL: 97.72% WAIT: 314.20 RESPONSE: 314.20
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0941 IDLE: 0085 UTIL: 90.97% WAIT: 590.20 RESPONSE: 134.20
+***
+===== TEST-4 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0569 IDLE: 0010 UTIL: 98.24% WAIT: 219.00 RESPONSE: 219.00
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0569 IDLE: 0010 UTIL: 98.24% WAIT: 184.67 RESPONSE: 184.67
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0609 IDLE: 0050 UTIL: 91.79% WAIT: 359.33 RESPONSE: 84.00
+***
+===== TEST-5 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0221 IDLE: 0005 UTIL: 97.74% WAIT: 51.00 RESPONSE: 51.00
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0221 IDLE: 0005 UTIL: 97.74% WAIT: 51.00 RESPONSE: 51.00
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0231 IDLE: 0015 UTIL: 93.51% WAIT: 86.00 RESPONSE: 50.50
+***
+===== TEST-6 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0462 IDLE: 0010 UTIL: 97.84% WAIT: 129.33 RESPONSE: 129.33
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0462 IDLE: 0010 UTIL: 97.84% WAIT: 103.00 RESPONSE: 103.00
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0487 IDLE: 0035 UTIL: 92.81% WAIT: 169.67 RESPONSE: 70.33
+***
+===== TEST-7 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0731 IDLE: 0020 UTIL: 97.26% WAIT: 279.60 RESPONSE: 279.60
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0731 IDLE: 0020 UTIL: 97.26% WAIT: 229.40 RESPONSE: 229.40
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0781 IDLE: 0070 UTIL: 91.04% WAIT: 443.00 RESPONSE: 136.60
+***
+===== TEST-8 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0843 IDLE: 0020 UTIL: 97.63% WAIT: 396.80 RESPONSE: 396.80
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0843 IDLE: 0020 UTIL: 97.63% WAIT: 300.80 RESPONSE: 300.80
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0903 IDLE: 0080 UTIL: 91.14% WAIT: 555.20 RESPONSE: 139.60
+***
+===== TEST-9 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0515 IDLE: 0010 UTIL: 98.06% WAIT: 170.67 RESPONSE: 170.67
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0515 IDLE: 0010 UTIL: 98.06% WAIT: 170.67 RESPONSE: 170.67
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0555 IDLE: 0050 UTIL: 90.99% WAIT: 324.00 RESPONSE: 81.00
+***
+===== TEST-10 =====
+***
+*** FIFO Simulator
+*** TOTAL CLOCKS: 0545 IDLE: 0010 UTIL: 98.17% WAIT: 202.33 RESPONSE: 202.33
+***
+***
+*** SRTJ Simulator
+*** TOTAL CLOCKS: 0545 IDLE: 0010 UTIL: 98.17% WAIT: 202.33 RESPONSE: 202.33
+***
+***
+*** Round Robin Simulator (FIFO in Round)
+*** TOTAL CLOCKS: 0585 IDLE: 0050 UTIL: 91.45% WAIT: 356.67 RESPONSE: 86.67
+***

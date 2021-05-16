@@ -396,6 +396,7 @@ void processSimulator()
 					isPreemtion = 0;
 					break;
 				}
+				
 				/* round end */
 				if(cur == last && performedjobCount < jobCount)
 				{
