@@ -22,7 +22,7 @@ int main(int argc,char* argv[]){
 
     srand((unsigned int)time(NULL));
 
-    num_processes = 2 + rand()%4;
+    num_processes = 2 + rand()%8;
 
     cur = (process*) malloc(sizeof(process));
 
@@ -38,6 +38,12 @@ int main(int argc,char* argv[]){
 
         codes->op = 0; 
         codes->len = 35+rand()%200;
+
+        if(i == num_processes-1) {    //last process will be RT process
+            cur->pid += 80;  
+            cur->arrival_time += rand()%50;
+            codes->len = 10+rand()%30;
+        }
 
         fwrite(cur, sizeof(process),1,stdout);
         fwrite(codes, cur->code_bytes,1,stdout);

@@ -220,44 +220,44 @@ void checkProcessArrival(int *cpuClock)
 }
 
 
-int addtoreadyQueue(int *cpuClock)
-{
-	process_t *cur, *ready;
-
-	/* realtime -> ready Queue */
-	if(!list_empty(&realtimeClassQueue))
+	int addtoreadyQueue(int *cpuClock)
 	{
-		cur = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
-		ready = list_first_entry(&readyQueue, process_t, ready);
+		process_t *cur, *ready;
 
-		if (ready->pid == 100)
+		/* realtime -> ready Queue */
+		if(!list_empty(&realtimeClassQueue))
+		{
+			cur = list_first_entry(&realtimeClassQueue, process_t, realtimeClass);
+			ready = list_first_entry(&readyQueue, process_t, ready);
+
+			if (ready->pid == 100)
+				list_add_tail(&cur->ready, &readyQueue);
+
+			else
+				list_add(&cur->ready, &readyQueue);
+
+			list_del(&cur->realtimeClass);
+			return 0;
+		}
+
+		/* normal -> ready Queue */
+		else if (!list_empty(&normalClassQueue))
+		{
+			cur = list_first_entry(&normalClassQueue, process_t, normalClass);
 			list_add_tail(&cur->ready, &readyQueue);
+			list_del(&cur->normalClass);
+			return 0;
+		}
 
-		else
-			list_add(&cur->ready, &readyQueue);
-
-		list_del(&cur->realtimeClass);
-		return 0;
+		/* idle -> ready Queue */
+		else if(list_empty(&readyQueue))
+		{
+			cur = list_first_entry(&idleClassQueue, process_t, idleClass);
+			list_add_tail(&cur->ready, &readyQueue);
+			list_del(&cur->idleClass);
+			return 1;
+		}
 	}
-
-	/* normal -> ready Queue */
-	else if (!list_empty(&normalClassQueue))
-	{
-		cur = list_first_entry(&normalClassQueue, process_t, normalClass);
-		list_add_tail(&cur->ready, &readyQueue);
-		list_del(&cur->normalClass);
-		return 0;
-	}
-
-	/* idle -> ready Queue */
-	else if(list_empty(&readyQueue))
-	{
-		cur = list_first_entry(&idleClassQueue, process_t, idleClass);
-		list_add_tail(&cur->ready, &readyQueue);
-		list_del(&cur->idleClass);
-		return 1;
-	}
-}
 
 void processSimulatorRR()
 {
