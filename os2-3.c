@@ -401,6 +401,7 @@ void processSimulator()
 				{
 					printf("%04d CPU: ROUND ENDS. Recharge the Timeslices\n", cpuClock);
 					
+					/* recharge timeSlice */
 					list_for_each_entry_safe(cur1, next1, &readyQueue, ready)
 						cur1->timeSlice = 0;
 
@@ -432,12 +433,14 @@ void processSimulator()
 			
 			sw = list_first_entry(&readyQueue, process_t, ready);
 
+			/* No Switching */
 			if(cur == sw)
 			{
 				printf("%04d CPU: Not Switched\tPID: %03d\n", cpuClock, sw->pid);
 				sw->timeSlice = 0;
 			}
 
+			/* Switching */
 			else
 			{
 				cpuClock += 5;
